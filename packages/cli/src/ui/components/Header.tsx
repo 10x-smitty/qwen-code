@@ -8,11 +8,18 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import Gradient from 'ink-gradient';
 import { Colors } from '../colors.js';
-import { shortAsciiLogo, longAsciiLogo } from './AsciiArt.js';
+import {
+  shortAsciiLogo,
+  longAsciiLogo,
+  generateFigletArt,
+  FigletConfig,
+} from './AsciiArt.js';
 import { getAsciiArtWidth } from '../utils/textUtils.js';
+import { FigletSettings } from '../../config/settings.js';
 
 interface HeaderProps {
   customAsciiArt?: string; // For user-defined ASCII art
+  figletSettings?: FigletSettings; // For configurable figlet settings
   terminalWidth: number; // For responsive logo
   version: string;
   nightly: boolean;
@@ -20,16 +27,33 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   customAsciiArt,
+  figletSettings,
   terminalWidth,
   version,
   nightly,
 }) => {
   let displayTitle;
-  const widthOfLongLogo = getAsciiArtWidth(longAsciiLogo);
 
   if (customAsciiArt) {
     displayTitle = customAsciiArt;
+  } else if (figletSettings) {
+    // Generate figlet art with user settings
+    const shouldUseShortForm = terminalWidth < 60; // Threshold for short form
+    const defaultText = shouldUseShortForm ? 'ID8' : 'ID8';
+    const defaultFont = shouldUseShortForm ? 'Small' : 'Alpha';
+    const defaultWidth = shouldUseShortForm ? 40 : 80;
+
+    displayTitle = generateFigletArt({
+      text: figletSettings.text || defaultText,
+      font: figletSettings.font || defaultFont,
+      horizontalLayout: figletSettings.horizontalLayout,
+      verticalLayout: figletSettings.verticalLayout,
+      width: figletSettings.width || defaultWidth,
+      whitespaceBreak: figletSettings.whitespaceBreak,
+    });
   } else {
+    // Use default figlet-generated logos
+    const widthOfLongLogo = getAsciiArtWidth(longAsciiLogo);
     displayTitle =
       terminalWidth >= widthOfLongLogo ? longAsciiLogo : shortAsciiLogo;
   }

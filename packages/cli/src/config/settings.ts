@@ -63,6 +63,15 @@ export interface AccessibilitySettings {
   disableLoadingPhrases?: boolean;
 }
 
+export interface FigletSettings {
+  text?: string;
+  font?: string;
+  horizontalLayout?: 'default' | 'full' | 'fitted' | 'controlled smushing' | 'universal smushing';
+  verticalLayout?: 'default' | 'full' | 'fitted' | 'controlled smushing' | 'universal smushing';
+  width?: number;
+  whitespaceBreak?: boolean;
+}
+
 export interface Settings {
   theme?: string;
   customThemes?: Record<string, CustomTheme>;
@@ -101,6 +110,9 @@ export interface Settings {
 
   hideTips?: boolean;
   hideBanner?: boolean;
+  
+  // Figlet ASCII art configuration
+  figlet?: FigletSettings;
 
   // Setting for setting maximum number of user/model/tool turns in a session.
   maxSessionTurns?: number;

@@ -815,6 +815,7 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
             <Box flexDirection="column" key="header">
               {!settings.merged.hideBanner && (
                 <Header
+                  figletSettings={settings.merged.figlet}
                   terminalWidth={terminalWidth}
                   version={version}
                   nightly={nightly}
