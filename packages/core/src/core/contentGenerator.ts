@@ -81,6 +81,15 @@ export function createContentGeneratorConfig(
   const googleCloudLocation = process.env.GOOGLE_CLOUD_LOCATION || undefined;
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
+  // Debug: Log environment variable status for OpenAI auth
+  if (process.env.DEBUG === 'true' && authType === AuthType.USE_OPENAI) {
+    console.log('[DEBUG] createContentGeneratorConfig - OpenAI auth:');
+    console.log('  authType:', authType);
+    console.log('  OPENAI_API_KEY:', openaiApiKey ? `[SET - ${openaiApiKey.slice(0, 10)}...]` : '[NOT SET]');
+    console.log('  OPENAI_BASE_URL:', process.env.OPENAI_BASE_URL || '[NOT SET]');
+    console.log('  OPENAI_MODEL:', process.env.OPENAI_MODEL || '[NOT SET]');
+  }
+
   // Use runtime model from config if available; otherwise, fall back to parameter or default
   const effectiveModel = config.getModel() || DEFAULT_GEMINI_MODEL;
 
@@ -183,6 +192,14 @@ export async function createContentGenerator(
   }
 
   if (config.authType === AuthType.USE_OPENAI) {
+    // Debug: Log config details
+    if (process.env.DEBUG === 'true') {
+      console.log('[DEBUG] createContentGenerator - OpenAI auth:');
+      console.log('  config.authType:', config.authType);
+      console.log('  config.apiKey:', config.apiKey ? `[SET - ${config.apiKey.slice(0, 10)}...]` : '[NOT SET]');
+      console.log('  config.model:', config.model);
+    }
+
     if (!config.apiKey) {
       throw new Error('OpenAI API key is required');
     }

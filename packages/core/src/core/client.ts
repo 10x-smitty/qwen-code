@@ -91,7 +91,7 @@ export class GeminiClient {
   private contentGenerator?: ContentGenerator;
   private embeddingModel: string;
   private generateContentConfig: GenerateContentConfig = {
-    temperature: 0,
+    temperature: parseFloat(process.env.TEMPERATURE || '0'),
     topP: 1,
   };
   private sessionTurnCount = 0;

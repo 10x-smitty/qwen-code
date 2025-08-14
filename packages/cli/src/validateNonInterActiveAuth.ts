@@ -9,6 +9,15 @@ import { USER_SETTINGS_PATH } from './config/settings.js';
 import { validateAuthMethod } from './config/auth.js';
 
 function getAuthTypeFromEnv(): AuthType | undefined {
+  // Debug: Log environment variable status
+  if (process.env.DEBUG === 'true') {
+    console.log('[DEBUG] Environment variables check:');
+    console.log('  OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? `[SET - ${process.env.OPENAI_API_KEY.slice(0, 10)}...]` : '[NOT SET]');
+    console.log('  OPENAI_BASE_URL:', process.env.OPENAI_BASE_URL || '[NOT SET]');
+    console.log('  OPENAI_MODEL:', process.env.OPENAI_MODEL || '[NOT SET]');
+    console.log('  GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? '[SET]' : '[NOT SET]');
+  }
+
   if (process.env.GOOGLE_GENAI_USE_GCA === 'true') {
     return AuthType.LOGIN_WITH_GOOGLE;
   }
