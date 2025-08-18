@@ -29,7 +29,7 @@ export interface FigletConfig {
  * Default figlet configuration
  */
 const DEFAULT_CONFIG: FigletConfig = {
-  text: 'SELF',
+  text: 'ORB',
   font: 'Alpha',
   horizontalLayout: 'fitted',
   verticalLayout: 'fitted',
@@ -71,13 +71,13 @@ export function getAvailableFonts(): string[] {
  * Generate ASCII art for different terminal widths
  */
 export const shortAsciiLogo = generateFigletArt({
-  text: 'SELF',
-  font: 'Small',
+  text: 'ORB',
+  font: 'Alpha',
   width: 40,
 });
 
 export const longAsciiLogo = generateFigletArt({
-  text: 'ID8',
+  text: 'ORB',
   font: 'Alpha',
   width: 80,
 });

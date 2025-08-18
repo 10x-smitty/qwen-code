@@ -39,8 +39,8 @@ export const Header: React.FC<HeaderProps> = ({
   } else if (figletSettings) {
     // Generate figlet art with user settings
     const shouldUseShortForm = terminalWidth < 60; // Threshold for short form
-    const defaultText = shouldUseShortForm ? 'ID8' : 'ID8';
-    const defaultFont = shouldUseShortForm ? 'Small' : 'Alpha';
+    const defaultText = shouldUseShortForm ? 'ORB' : 'ORB';
+    const defaultFont = 'Alpha';  // Always use Alpha font
     const defaultWidth = shouldUseShortForm ? 40 : 80;
 
     displayTitle = generateFigletArt({

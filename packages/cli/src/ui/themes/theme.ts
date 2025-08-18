@@ -36,36 +36,36 @@ export const lightTheme: ColorsTheme = {
   type: 'light',
   Background: '#FAFAFA',
   Foreground: '#3C3C43',
-  LightBlue: '#89BDCD',
-  AccentBlue: '#3B82F6',
+  LightBlue: '#4682B4',  // Steel Blue
+  AccentBlue: '#1E90FF',  // Dodger Blue
   AccentPurple: '#8B5CF6',
-  AccentCyan: '#06B6D4',
-  AccentGreen: '#3CA84B',
-  AccentYellow: '#D5A40A',
+  AccentCyan: '#5F9EA0',  // Cadet Blue
+  AccentGreen: '#48D1CC',  // Medium Turquoise
+  AccentYellow: '#87CEEB',  // Sky Blue
   AccentRed: '#DD4C4C',
   DiffAdded: '#C6EAD8',
   DiffRemoved: '#FFCCCC',
   Comment: '#008000',
   Gray: '#97a0b0',
-  GradientColors: ['#4796E4', '#847ACE', '#C3677F'],
+  GradientColors: ['#1E90FF', '#00BFFF'],  // Dodger Blue to Deep Sky Blue gradient
 };
 
 export const darkTheme: ColorsTheme = {
   type: 'dark',
   Background: '#1E1E2E',
   Foreground: '#CDD6F4',
-  LightBlue: '#ADD8E6',
-  AccentBlue: '#89B4FA',
+  LightBlue: '#87CEEB',  // Sky Blue
+  AccentBlue: '#00BFFF',  // Deep Sky Blue
   AccentPurple: '#CBA6F7',
-  AccentCyan: '#89DCEB',
-  AccentGreen: '#A6E3A1',
-  AccentYellow: '#F9E2AF',
+  AccentCyan: '#5F9EA0',  // Cadet Blue
+  AccentGreen: '#48D1CC',  // Medium Turquoise
+  AccentYellow: '#87CEFA',  // Light Sky Blue
   AccentRed: '#F38BA8',
   DiffAdded: '#28350B',
   DiffRemoved: '#430000',
   Comment: '#6C7086',
   Gray: '#6C7086',
-  GradientColors: ['#4796E4', '#847ACE', '#C3677F'],
+  GradientColors: ['#1E90FF', '#00BFFF'],  // Dodger Blue to Deep Sky Blue gradient
 };
 
 export const ansiTheme: ColorsTheme = {

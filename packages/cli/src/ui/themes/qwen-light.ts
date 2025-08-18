@@ -10,18 +10,18 @@ const qwenLightColors: ColorsTheme = {
   type: 'light',
   Background: '#f8f9fa',
   Foreground: '#5c6166',
-  LightBlue: '#55b4d4',
-  AccentBlue: '#399ee6',
+  LightBlue: '#4682B4',  // Steel Blue
+  AccentBlue: '#1E90FF',  // Dodger Blue
   AccentPurple: '#a37acc',
-  AccentCyan: '#4cbf99',
-  AccentGreen: '#86b300',
-  AccentYellow: '#f2ae49',
+  AccentCyan: '#5F9EA0',  // Cadet Blue
+  AccentGreen: '#48D1CC',  // Medium Turquoise
+  AccentYellow: '#87CEEB',  // Sky Blue
   AccentRed: '#f07171',
-  DiffAdded: '#86b300',
+  DiffAdded: '#48D1CC',
   DiffRemoved: '#f07171',
   Comment: '#ABADB1',
   Gray: '#CCCFD3',
-  GradientColors: ['#399ee6', '#86b300'],
+  GradientColors: ['#1E90FF', '#00BFFF'],  // Dodger Blue to Deep Sky Blue gradient
 };
 
 export const QwenLight: Theme = new Theme(
