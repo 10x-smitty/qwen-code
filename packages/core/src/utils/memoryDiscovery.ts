@@ -252,7 +252,7 @@ function concatenateInstructions(
 }
 
 /**
- * Loads hierarchical QWEN.md files and concatenates their content.
+ * Loads hierarchical ORB.md files and concatenates their content.
  * This function is intended for use by the server.
  */
 export async function loadServerHierarchicalMemory(
@@ -282,7 +282,7 @@ export async function loadServerHierarchicalMemory(
     maxDirs,
   );
   if (filePaths.length === 0) {
-    if (debugMode) logger.debug('No QWEN.md files found in hierarchy.');
+    if (debugMode) logger.debug('No ORB.md files found in hierarchy.');
     return { memoryContent: '', fileCount: 0 };
   }
   const contentsWithPaths = await readGeminiMdFiles(
