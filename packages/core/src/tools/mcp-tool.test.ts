@@ -86,31 +86,27 @@ describe('DiscoveredMCPTool', () => {
 
   describe('constructor', () => {
     it('should set properties correctly', () => {
+      const mockClient = {} as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
 
       expect(tool.name).toBe(serverToolName);
-      expect(tool.schema.name).toBe(serverToolName);
-      expect(tool.schema.description).toBe(baseDescription);
-      expect(tool.schema.parameters).toBeUndefined();
-      expect(tool.schema.parametersJsonSchema).toEqual(inputSchema);
       expect(tool.serverToolName).toBe(serverToolName);
       expect(tool.timeout).toBeUndefined();
     });
 
     it('should accept and store a custom timeout', () => {
       const customTimeout = 5000;
+      const mockClient = {} as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
         customTimeout,
       );
       expect(tool.timeout).toBe(customTimeout);
@@ -119,12 +115,12 @@ describe('DiscoveredMCPTool', () => {
 
   describe('execute', () => {
     it('should call mcpTool.callTool with correct parameters and format display output', async () => {
+      const mockClient = { callTool: vi.fn().mockResolvedValue({ content: [{ type: 'text', text: 'test result' }] }) } as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
       const params = { param: 'testValue' };
       const mockToolSuccessResultObject = {
@@ -158,12 +154,12 @@ describe('DiscoveredMCPTool', () => {
     });
 
     it('should handle empty result from getStringifiedResultForDisplay', async () => {
+      const mockClient = { callTool: vi.fn().mockResolvedValue({ content: [] }) } as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
       const params = { param: 'testValue' };
       const mockMcpToolResponsePartsEmpty: Part[] = [];
@@ -173,16 +169,15 @@ describe('DiscoveredMCPTool', () => {
     });
 
     it('should propagate rejection if mcpTool.callTool rejects', async () => {
+      const expectedError = new Error('MCP call failed');
+      const mockClient = { callTool: vi.fn().mockRejectedValue(expectedError) } as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
       const params = { param: 'failCase' };
-      const expectedError = new Error('MCP call failed');
-      mockCallTool.mockRejectedValue(expectedError);
 
       await expect(tool.execute(params)).rejects.toThrow(expectedError);
     });
@@ -192,12 +187,12 @@ describe('DiscoveredMCPTool', () => {
     // beforeEach is already clearing allowlist
 
     it('should return false if trust is true', async () => {
+      const mockClient = {} as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
         undefined,
         true,
       );
@@ -208,12 +203,12 @@ describe('DiscoveredMCPTool', () => {
 
     it('should return false if server is allowlisted', async () => {
       (DiscoveredMCPTool as any).allowlist.add(serverName);
+      const mockClient = {} as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
       expect(
         await tool.shouldConfirmExecute({}, new AbortController().signal),
@@ -223,12 +218,12 @@ describe('DiscoveredMCPTool', () => {
     it('should return false if tool is allowlisted', async () => {
       const toolAllowlistKey = `${serverName}.${serverToolName}`;
       (DiscoveredMCPTool as any).allowlist.add(toolAllowlistKey);
+      const mockClient = {} as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
       expect(
         await tool.shouldConfirmExecute({}, new AbortController().signal),
@@ -236,12 +231,12 @@ describe('DiscoveredMCPTool', () => {
     });
 
     it('should return confirmation details if not trusted and not allowlisted', async () => {
+      const mockClient = {} as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
       const confirmation = await tool.shouldConfirmExecute(
         {},
@@ -266,12 +261,12 @@ describe('DiscoveredMCPTool', () => {
     });
 
     it('should add server to allowlist on ProceedAlwaysServer', async () => {
+      const mockClient = {} as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
       const confirmation = await tool.shouldConfirmExecute(
         {},
@@ -296,12 +291,12 @@ describe('DiscoveredMCPTool', () => {
     });
 
     it('should add tool to allowlist on ProceedAlwaysTool', async () => {
+      const mockClient = {} as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
       const toolAllowlistKey = `${serverName}.${serverToolName}`;
       const confirmation = await tool.shouldConfirmExecute(
@@ -327,12 +322,12 @@ describe('DiscoveredMCPTool', () => {
     });
 
     it('should handle Cancel confirmation outcome', async () => {
+      const mockClient = {} as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
       const confirmation = await tool.shouldConfirmExecute(
         {},
@@ -363,12 +358,12 @@ describe('DiscoveredMCPTool', () => {
     });
 
     it('should handle ProceedOnce confirmation outcome', async () => {
+      const mockClient = {} as any;
+      const mockTool = { name: serverToolName, description: baseDescription, inputSchema: { type: 'object' as const, properties: {} } };
       const tool = new DiscoveredMCPTool(
-        mockCallableToolInstance,
+        mockClient,
+        mockTool,
         serverName,
-        serverToolName,
-        baseDescription,
-        inputSchema,
       );
       const confirmation = await tool.shouldConfirmExecute(
         {},

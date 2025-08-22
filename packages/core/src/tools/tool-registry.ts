@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 import { discoverMcpTools } from './mcp-client.js';
 import { DiscoveredMCPTool } from './mcp-tool.js';
+import { ModelSchemaAdapter, ModelType, ModelToolSchema } from './model-schema-adapter.js';
 import { parse } from 'shell-quote';
 
 type ToolParams = Record<string, unknown>;
@@ -350,13 +351,67 @@ export class ToolRegistry {
    * Extracts the declarations from the ToolListUnion structure.
    * Includes discovered (vs registered) tools if configured.
    * @returns An array of FunctionDeclarations.
+   * @deprecated Use getToolSchemasForModel for better model compatibility
    */
   getFunctionDeclarations(): FunctionDeclaration[] {
     const declarations: FunctionDeclaration[] = [];
     this.tools.forEach((tool) => {
-      declarations.push(tool.schema);
+      if (tool instanceof DiscoveredMCPTool) {
+        // For MCP tools, get the Gemini-specific schema
+        const geminiSchema = tool.getSchemaForModel('gemini') as any;
+        declarations.push({
+          name: geminiSchema.name,
+          description: geminiSchema.description,
+          parametersJsonSchema: geminiSchema.parametersJsonSchema,
+        });
+      } else {
+        declarations.push(tool.schema);
+      }
     });
     return declarations;
+  }
+
+  /**
+   * Get tool schemas adapted for a specific model type
+   * @param modelType The target model type (claude, gemini, openai)
+   * @returns Array of model-specific tool schemas
+   */
+  getToolSchemasForModel(modelType: ModelType): ModelToolSchema[] {
+    const schemas: ModelToolSchema[] = [];
+    this.tools.forEach((tool) => {
+      if (tool instanceof DiscoveredMCPTool) {
+        // Use model-specific adapter for MCP tools
+        schemas.push(tool.getSchemaForModel(modelType) as ModelToolSchema);
+      } else {
+        // For built-in tools, adapt the schema
+        const toolSchema = {
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.schema.parametersJsonSchema || { type: 'object', properties: {} },
+        };
+        schemas.push(ModelSchemaAdapter.adaptForModel(toolSchema as any, modelType));
+      }
+    });
+    return schemas;
+  }
+
+  /**
+   * Check if the tool registry contains MCP tools for the given model type
+   * @param modelType The model type to check compatibility for
+   * @returns True if there are MCP tools and they support the model type
+   */
+  hasModelCompatibleTools(modelType: ModelType): boolean {
+    for (const tool of this.tools.values()) {
+      if (tool instanceof DiscoveredMCPTool) {
+        try {
+          tool.getSchemaForModel(modelType);
+          return true;
+        } catch {
+          continue;
+        }
+      }
+    }
+    return false;
   }
 
   /**

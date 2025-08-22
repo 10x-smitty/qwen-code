@@ -44,6 +44,7 @@ import {
 import { ProxyAgent, setGlobalDispatcher } from 'undici';
 import { DEFAULT_GEMINI_FLASH_MODEL } from '../config/models.js';
 import { LoopDetectionService } from '../services/loopDetectionService.js';
+import { detectModelType } from '../tools/model-detection.js';
 import { ideContext } from '../ide/ideContext.js';
 import { logNextSpeakerCheck } from '../telemetry/loggers.js';
 import { NextSpeakerCheckEvent } from '../telemetry/types.js';
@@ -165,9 +166,22 @@ export class GeminiClient {
 
   async setTools(): Promise<void> {
     const toolRegistry = await this.config.getToolRegistry();
-    const toolDeclarations = toolRegistry.getFunctionDeclarations();
-    const tools: Tool[] = [{ functionDeclarations: toolDeclarations }];
-    this.getChat().setTools(tools);
+    const modelName = this.config.getModel();
+    const modelType = detectModelType(modelName);
+    
+    // Use model-aware schemas for better compatibility
+    if (modelType === 'claude' || modelType === 'openai') {
+      // For Claude and OpenAI models, we'll let the content generator handle conversion
+      // Still need to provide Gemini format for the chat interface
+      const toolDeclarations = toolRegistry.getFunctionDeclarations();
+      const tools: Tool[] = [{ functionDeclarations: toolDeclarations }];
+      this.getChat().setTools(tools);
+    } else {
+      // For Gemini models, use direct function declarations
+      const toolDeclarations = toolRegistry.getFunctionDeclarations();
+      const tools: Tool[] = [{ functionDeclarations: toolDeclarations }];
+      this.getChat().setTools(tools);
+    }
   }
 
   async resetChat(): Promise<void> {

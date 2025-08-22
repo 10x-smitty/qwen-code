@@ -26,6 +26,8 @@ import { logApiError, logApiResponse } from '../telemetry/loggers.js';
 import { ApiErrorEvent, ApiResponseEvent } from '../telemetry/types.js';
 import { Config } from '../config/config.js';
 import { openaiLogger } from '../utils/openaiLogger.js';
+import { detectModelType } from '../tools/model-detection.js';
+import { ModelSchemaAdapter } from '../tools/model-schema-adapter.js';
 
 // OpenAI API type definitions for logging
 interface OpenAIToolCall {
@@ -745,6 +747,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
     geminiTools: ToolListUnion,
   ): Promise<OpenAI.Chat.ChatCompletionTool[]> {
     const openAITools: OpenAI.Chat.ChatCompletionTool[] = [];
+    const modelType = detectModelType(this.model);
 
     for (const tool of geminiTools) {
       let actualTool: Tool;
@@ -761,14 +764,31 @@ export class OpenAIContentGenerator implements ContentGenerator {
       if (actualTool.functionDeclarations) {
         for (const func of actualTool.functionDeclarations) {
           if (func.name && func.description) {
+            let parameters: Record<string, unknown> | undefined;
+            
+            // For Claude models, use input_schema format, otherwise use parameters format
+            if (modelType === 'claude') {
+              // Claude expects input_schema, but we need to convert to parameters for OpenAI API format
+              const claudeSchema = {
+                name: func.name,
+                description: func.description,
+                inputSchema: func.parametersJsonSchema || { type: 'object', properties: {} },
+              };
+              const adaptedSchema = ModelSchemaAdapter.adaptForModel(claudeSchema as any, 'claude');
+              parameters = (adaptedSchema as any).input_schema;
+            } else {
+              // For OpenAI and other models, convert Gemini parameters
+              parameters = this.convertGeminiParametersToOpenAI(
+                (func.parametersJsonSchema || {}) as Record<string, unknown>,
+              );
+            }
+
             openAITools.push({
               type: 'function',
               function: {
                 name: func.name,
                 description: func.description,
-                parameters: this.convertGeminiParametersToOpenAI(
-                  (func.parameters || {}) as Record<string, unknown>,
-                ),
+                parameters,
               },
             });
           }

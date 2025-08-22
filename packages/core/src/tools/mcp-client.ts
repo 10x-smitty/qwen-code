@@ -26,7 +26,7 @@ import { AuthProviderType, MCPServerConfig } from '../config/config.js';
 import { GoogleCredentialProvider } from '../mcp/google-auth-provider.js';
 import { DiscoveredMCPTool } from './mcp-tool.js';
 
-import { FunctionDeclaration, mcpToTool } from '@google/genai';
+import { ListToolsResult, ListToolsResultSchema, Tool } from '@modelcontextprotocol/sdk/types.js';
 import { ToolRegistry } from './tool-registry.js';
 import { PromptRegistry } from '../prompts/prompt-registry.js';
 import { MCPOAuthProvider } from '../mcp/oauth-provider.js';
@@ -433,28 +433,28 @@ export async function discoverTools(
   mcpClient: Client,
 ): Promise<DiscoveredMCPTool[]> {
   try {
-    const mcpCallableTool = mcpToTool(mcpClient);
-    const tool = await mcpCallableTool.tool();
+    const response: ListToolsResult = await mcpClient.request(
+      { method: 'tools/list', params: {} },
+      ListToolsResultSchema,
+    );
 
-    if (!Array.isArray(tool.functionDeclarations)) {
+    if (!response.tools || response.tools.length === 0) {
       // This is a valid case for a prompt-only server
       return [];
     }
 
     const discoveredTools: DiscoveredMCPTool[] = [];
-    for (const funcDecl of tool.functionDeclarations) {
+    for (const tool of response.tools) {
       try {
-        if (!isEnabled(funcDecl, mcpServerName, mcpServerConfig)) {
+        if (!isToolEnabled(tool, mcpServerName, mcpServerConfig)) {
           continue;
         }
 
         discoveredTools.push(
           new DiscoveredMCPTool(
-            mcpCallableTool,
+            mcpClient,
+            tool,
             mcpServerName,
-            funcDecl.name!,
-            funcDecl.description ?? '',
-            funcDecl.parametersJsonSchema ?? { type: 'object', properties: {} },
             mcpServerConfig.timeout ?? MCP_DEFAULT_TIMEOUT_MSEC,
             mcpServerConfig.trust,
           ),
@@ -462,7 +462,7 @@ export async function discoverTools(
       } catch (error) {
         console.error(
           `Error discovering tool: '${
-            funcDecl.name
+            tool.name
           }' from MCP server '${mcpServerName}': ${(error as Error).message}`,
         );
       }
@@ -1086,8 +1086,35 @@ export async function createTransport(
 }
 
 /** Visible for testing */
+export function isToolEnabled(
+  tool: Tool,
+  mcpServerName: string,
+  mcpServerConfig: MCPServerConfig,
+): boolean {
+  if (!tool.name) {
+    console.warn(
+      `Discovered a tool without a name from MCP server '${mcpServerName}'. Skipping.`,
+    );
+    return false;
+  }
+  const { includeTools, excludeTools } = mcpServerConfig;
+
+  // excludeTools takes precedence over includeTools
+  if (excludeTools && excludeTools.includes(tool.name)) {
+    return false;
+  }
+
+  return (
+    !includeTools ||
+    includeTools.some(
+      (toolName) => toolName === tool.name || toolName.startsWith(`${tool.name}(`),
+    )
+  );
+}
+
+/** Legacy function name for backward compatibility - will be removed */
 export function isEnabled(
-  funcDecl: FunctionDeclaration,
+  funcDecl: { name?: string },
   mcpServerName: string,
   mcpServerConfig: MCPServerConfig,
 ): boolean {

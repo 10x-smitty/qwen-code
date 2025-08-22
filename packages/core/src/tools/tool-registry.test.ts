@@ -29,6 +29,7 @@ import {
   Type,
   Schema,
 } from '@google/genai';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { spawn } from 'node:child_process';
 import { IdeClient } from '../ide/ide-client.js';
 import fs from 'node:fs';
@@ -215,35 +216,27 @@ describe('ToolRegistry', () => {
     it('should return only tools matching the server name, sorted by name', async () => {
       const server1Name = 'mcp-server-uno';
       const server2Name = 'mcp-server-dos';
-      const mockCallable = {} as CallableTool;
+      const mockClient = {} as Client;
       const mcpTool1_c = new DiscoveredMCPTool(
-        mockCallable,
+        mockClient,
+        { name: 'zebra-tool', description: 'd1', inputSchema: {} } as any,
         server1Name,
-        'zebra-tool',
-        'd1',
-        {},
       );
       const mcpTool1_a = new DiscoveredMCPTool(
-        mockCallable,
+        mockClient,
+        { name: 'apple-tool', description: 'd2', inputSchema: {} } as any,
         server1Name,
-        'apple-tool',
-        'd2',
-        {},
       );
       const mcpTool1_b = new DiscoveredMCPTool(
-        mockCallable,
+        mockClient,
+        { name: 'banana-tool', description: 'd3', inputSchema: {} } as any,
         server1Name,
-        'banana-tool',
-        'd3',
-        {},
       );
 
       const mcpTool2 = new DiscoveredMCPTool(
-        mockCallable,
+        mockClient,
+        { name: 'tool-on-server2', description: 'd4', inputSchema: {} } as any,
         server2Name,
-        'tool-on-server2',
-        'd4',
-        {},
       );
       const nonMcpTool = new MockTool('regular-tool');
 

@@ -12,13 +12,9 @@ import {
   ToolMcpConfirmationDetails,
   Icon,
 } from './tools.js';
-import {
-  CallableTool,
-  Part,
-  FunctionCall,
-  FunctionDeclaration,
-  Type,
-} from '@google/genai';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { ModelSchemaAdapter, ModelType } from './model-schema-adapter.js';
 
 type ToolParams = Record<string, unknown>;
 
@@ -26,33 +22,38 @@ export class DiscoveredMCPTool extends BaseTool<ToolParams, ToolResult> {
   private static readonly allowlist: Set<string> = new Set();
 
   constructor(
-    private readonly mcpTool: CallableTool,
+    private readonly mcpClient: Client,
+    private readonly mcpTool: Tool,
     readonly serverName: string,
-    readonly serverToolName: string,
-    description: string,
-    readonly parameterSchemaJson: unknown,
     readonly timeout?: number,
     readonly trust?: boolean,
     nameOverride?: string,
   ) {
+    const normalizedSchema = ModelSchemaAdapter.normalizeSchema(mcpTool.inputSchema) as any;
     super(
-      nameOverride ?? generateValidName(serverToolName),
-      `${serverToolName} (${serverName} MCP Server)`,
-      description,
+      nameOverride ?? generateValidName(mcpTool.name),
+      `${mcpTool.name} (${serverName} MCP Server)`,
+      mcpTool.description || '',
       Icon.Hammer,
-      { type: Type.OBJECT }, // this is a dummy Schema for MCP, will be not be used to construct the FunctionDeclaration
+      normalizedSchema,
       true, // isOutputMarkdown
       false, // canUpdateOutput
     );
   }
 
+  get serverToolName(): string {
+    return this.mcpTool.name;
+  }
+
+  get parameterSchemaJson(): unknown {
+    return this.mcpTool.inputSchema;
+  }
+
   asFullyQualifiedTool(): DiscoveredMCPTool {
     return new DiscoveredMCPTool(
+      this.mcpClient,
       this.mcpTool,
       this.serverName,
-      this.serverToolName,
-      this.description,
-      this.parameterSchemaJson,
       this.timeout,
       this.trust,
       `${this.serverName}__${this.serverToolName}`,
@@ -60,15 +61,10 @@ export class DiscoveredMCPTool extends BaseTool<ToolParams, ToolResult> {
   }
 
   /**
-   * Overrides the base schema to use parametersJsonSchema when building
-   * FunctionDeclaration
+   * Get schema adapted for a specific model type
    */
-  override get schema(): FunctionDeclaration {
-    return {
-      name: this.name,
-      description: this.description,
-      parametersJsonSchema: this.parameterSchemaJson,
-    };
+  getSchemaForModel(modelType: ModelType): unknown {
+    return ModelSchemaAdapter.adaptForModel(this.mcpTool, modelType);
   }
 
   async shouldConfirmExecute(
@@ -107,77 +103,64 @@ export class DiscoveredMCPTool extends BaseTool<ToolParams, ToolResult> {
   }
 
   async execute(params: ToolParams): Promise<ToolResult> {
-    const functionCalls: FunctionCall[] = [
-      {
-        name: this.serverToolName,
-        args: params,
-      },
-    ];
+    try {
+      const result = await this.mcpClient.callTool(
+        {
+          name: this.serverToolName,
+          arguments: params,
+        }
+      ) as CallToolResult;
 
-    const responseParts: Part[] = await this.mcpTool.callTool(functionCalls);
+      // Convert MCP content to Gemini Part format for compatibility
+      const llmContent: any[] = result.content.map((content: any) => {
+        if (content.type === 'text') {
+          return { text: content.text };
+        }
+        return content; // Pass through other content types as-is
+      });
 
-    return {
-      llmContent: responseParts,
-      returnDisplay: getStringifiedResultForDisplay(responseParts),
-    };
+      return {
+        llmContent,
+        returnDisplay: formatMCPResponse(result),
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        llmContent: [{ text: `MCP Tool Error: ${errorMessage}` }],
+        returnDisplay: `❌ MCP Tool Error: ${errorMessage}`,
+      };
+    }
   }
 }
 
 /**
- * Processes an array of `Part` objects, primarily from a tool's execution result,
- * to generate a user-friendly string representation, typically for display in a CLI.
- *
- * The `result` array can contain various types of `Part` objects:
- * 1. `FunctionResponse` parts:
- *    - If the `response.content` of a `FunctionResponse` is an array consisting solely
- *      of `TextPart` objects, their text content is concatenated into a single string.
- *      This is to present simple textual outputs directly.
- *    - If `response.content` is an array but contains other types of `Part` objects (or a mix),
- *      the `content` array itself is preserved. This handles structured data like JSON objects or arrays
- *      returned by a tool.
- *    - If `response.content` is not an array or is missing, the entire `functionResponse`
- *      object is preserved.
- * 2. Other `Part` types (e.g., `TextPart` directly in the `result` array):
- *    - These are preserved as is.
- *
- * All processed parts are then collected into an array, which is JSON.stringify-ed
- * with indentation and wrapped in a markdown JSON code block.
+ * Format MCP CallToolResult for display
  */
-function getStringifiedResultForDisplay(result: Part[]) {
-  if (!result || result.length === 0) {
+function formatMCPResponse(result: CallToolResult): string {
+  if (!result?.content || result.content.length === 0) {
     return '```json\n[]\n```';
   }
 
-  const processFunctionResponse = (part: Part) => {
-    if (part.functionResponse) {
-      const responseContent = part.functionResponse.response?.content;
-      if (responseContent && Array.isArray(responseContent)) {
-        // Check if all parts in responseContent are simple TextParts
-        const allTextParts = responseContent.every(
-          (p: Part) => p.text !== undefined,
-        );
-        if (allTextParts) {
-          return responseContent.map((p: Part) => p.text).join('');
-        }
-        // If not all simple text parts, return the array of these content parts for JSON stringification
-        return responseContent;
-      }
-
-      // If no content, or not an array, or not a functionResponse, stringify the whole functionResponse part for inspection
-      return part.functionResponse;
-    }
-    return part; // Fallback for unexpected structure or non-FunctionResponsePart
-  };
-
-  const processedResults =
-    result.length === 1
-      ? processFunctionResponse(result[0])
-      : result.map(processFunctionResponse);
-  if (typeof processedResults === 'string') {
-    return processedResults;
+  // If single text content, return directly
+  if (result.content.length === 1 && result.content[0].type === 'text') {
+    return result.content[0].text || '';
   }
 
-  return '```json\n' + JSON.stringify(processedResults, null, 2) + '\n```';
+  // For multiple content items or non-text content, format as JSON
+  const processedContent = result.content.map(content => {
+    if (content.type === 'text') {
+      return content.text;
+    }
+    return content; // Return full object for non-text content
+  });
+
+  // If all content is text, join directly
+  if (result.content.every(c => c.type === 'text')) {
+    return processedContent.join('\n');
+  }
+
+  // Otherwise format as JSON
+  return '```json\n' + JSON.stringify(processedContent, null, 2) + '\n```';
 }
 
 /** Visible for testing */

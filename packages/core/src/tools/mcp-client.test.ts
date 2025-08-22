@@ -37,21 +37,25 @@ describe('mcp-client', () => {
 
   describe('discoverTools', () => {
     it('should discover tools', async () => {
-      const mockedClient = {} as unknown as ClientLib.Client;
-      const mockedMcpToTool = vi.mocked(GenAiLib.mcpToTool).mockReturnValue({
-        tool: () => ({
-          functionDeclarations: [
+      const mockedClient = {
+        request: vi.fn().mockResolvedValue({
+          tools: [
             {
               name: 'testFunction',
+              description: 'Test function',
+              inputSchema: { type: 'object', properties: {} },
             },
           ],
         }),
-      } as unknown as GenAiLib.CallableTool);
+      } as unknown as ClientLib.Client;
 
       const tools = await discoverTools('test-server', {}, mockedClient);
 
       expect(tools.length).toBe(1);
-      expect(mockedMcpToTool).toHaveBeenCalledOnce();
+      expect(mockedClient.request).toHaveBeenCalledWith(
+        { method: 'tools/list', params: {} },
+        expect.any(Object),
+      );
     });
 
     it('should log an error if there is an error discovering a tool', async () => {
@@ -65,32 +69,35 @@ describe('mcp-client', () => {
       const testError = new Error('Invalid tool name');
       vi.mocked(DiscoveredMCPTool).mockImplementation(
         (
-          _mcpCallableTool: GenAiLib.CallableTool,
+          _mcpClient: ClientLib.Client,
+          _mcpTool: any,
           _serverName: string,
-          name: string,
         ) => {
-          if (name === 'invalid tool name') {
+          if (_mcpTool.name === 'invalid tool name') {
             throw testError;
           }
           return { name: 'validTool' } as DiscoveredMCPTool;
         },
       );
 
-      vi.mocked(GenAiLib.mcpToTool).mockReturnValue({
-        tool: () =>
-          Promise.resolve({
-            functionDeclarations: [
-              {
-                name: 'validTool',
-              },
-              {
-                name: 'invalid tool name', // this will fail validation
-              },
-            ],
-          }),
-      } as unknown as GenAiLib.CallableTool);
+      const mockedClientWithErrors = {
+        request: vi.fn().mockResolvedValue({
+          tools: [
+            {
+              name: 'validTool',
+              description: 'Valid tool',
+              inputSchema: { type: 'object', properties: {} },
+            },
+            {
+              name: 'invalid tool name', // this will fail validation
+              description: 'Invalid tool',
+              inputSchema: { type: 'object', properties: {} },
+            },
+          ],
+        }),
+      } as unknown as ClientLib.Client;
 
-      const tools = await discoverTools('test-server', {}, mockedClient);
+      const tools = await discoverTools('test-server', {}, mockedClientWithErrors);
 
       expect(tools.length).toBe(1);
       expect(tools[0].name).toBe('validTool');
